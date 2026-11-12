@@ -1,0 +1,49 @@
+name: Parallel API Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  python-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies & Lint
+        run: |
+          pip install -r python-api/requirements.txt pylint
+          pylint --disable=C0114,C0115,C0116 python-api/app.py
+      - name: Build Python Docker Image
+        run: docker build -t python-api:latest ./python-api
+
+  node-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Test Node API
+        working-directory: ./node-api
+        run: npm test
+      - name: Build Node Docker Image
+        run: docker build -t node-api:latest ./node-api
+
+  java-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+      - name: Compile & Package Java
+        working-directory: ./java-api
+        run: mvn clean package
+      - name: Build Java Docker Image
+        run: docker build -t java-api:latest ./java-api
